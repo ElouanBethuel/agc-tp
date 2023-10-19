@@ -141,7 +141,19 @@ def get_identity(alignment_list: List[str]) -> float:
     :param alignment_list:  (list) A list of aligned sequences in the format ["SE-QUENCE1", "SE-QUENCE2"]
     :return: (float) The rate of identity between the two sequences.
     """
-    pass
+    
+    sequence1 = alignment_list[0]
+    sequence2 = alignment_list[1]
+    nb_id_nucl = 0
+    long_al = len(sequence1)
+    
+    for i in range(len(sequence1)):
+        if sequence1[i] == sequence2[i]:
+            nb_id_nucl += 1
+    
+    id = round(((nb_id_nucl/long_al)*100), 1)
+    return id
+
 
 def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: int, chunk_size: int, kmer_size: int) -> List:
     """Compute an abundance greedy clustering regarding sequence count and identity.
@@ -154,7 +166,25 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     :param kmer_size: (int) A fournir mais non utilise cette annee
     :return: (list) A list of all the [OTU (str), count (int)] .
     """
-    pass
+    
+    list_otu = []
+    
+    for sequence1, count1 in dereplication_fulllength(amplicon_file, minseqlen, mincount):
+
+        if len(list_otu) == 0:
+            list_otu.append([sequence1, count1])
+        
+        else:
+        
+            for sequence2, count2 in list_otu:
+            
+                 align = nw.global_align(sequence1, sequence2, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
+                 id = get_identity(align)
+                 if id <= 97:
+                    list_otu.append([sequence1, count1])
+                    break
+ 
+    return list_otu
 
 
 def write_OTU(OTU_list: List, output_file: Path) -> None:
@@ -163,7 +193,13 @@ def write_OTU(OTU_list: List, output_file: Path) -> None:
     :param OTU_list: (list) A list of OTU sequences
     :param output_file: (Path) Path to the output file
     """
-    pass
+    
+    with open(output_file, 'w') as filin:
+        for i, (sequence, count) in enumerate(OTU_list, start=1):
+ 
+            filin.write(f">OTU_{i} occurrence:{count}\n")
+            sequence_form = textwrap.fill(sequence, width=80)
+            filin.write(f"{sequence_form}\n")
 
 
 #==============================================================
@@ -176,8 +212,11 @@ def main(): # pragma: no cover
     # Get arguments
     args = get_arguments()
     # Votre programme ici
-
-
+    OTU_list = abundance_greedy_clustering(args.amplicon_file, args.minseqlen, args.mincount, 0, 0)
+    write_OTU(OTU_list, "test_final")
 
 if __name__ == '__main__':
     main()
+    
+
+    
