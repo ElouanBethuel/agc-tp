@@ -19,12 +19,14 @@ import os
 import gzip
 import statistics
 import textwrap
+import numpy as np 
 from pathlib import Path
 from collections import Counter
 from typing import Iterator, Dict, List
 # https://github.com/briney/nwalign3
 # ftp://ftp.ncbi.nih.gov/blast/matrices/
 import nwalign3 as nw
+np.int = int 
 
 __author__ = "Your Name"
 __copyright__ = "Universite Paris Diderot"
@@ -83,6 +85,25 @@ def read_fasta(amplicon_file: Path, minseqlen: int) -> Iterator[str]:
     :param minseqlen: (int) Minimum amplicon sequence length
     :return: A generator object that provides the Fasta sequences (str).
     """
+    with gzip.open(amplicon_file, 'rt') as filin:
+        
+        amplicon = ""
+        
+        for line in filin:
+            
+            line = line.strip()
+        
+            if line.startswith(">"):
+                if amplicon and len(amplicon) >= minseqlen:
+                    yield amplicon
+                amplicon = ""
+                
+            else:
+                amplicon += line
+
+        if amplicon and len(amplicon) >= minseqlen:
+            yield amplicon
+
     pass
 
 
@@ -94,7 +115,25 @@ def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int)
     :param mincount: (int) Minimum amplicon count
     :return: A generator object that provides a (list)[sequences, count] of sequence with a count >= mincount and a length >= minseqlen.
     """
-    pass
+    
+    dict_seq = {}
+    list_seq = []
+    
+    for sequence in read_fasta(amplicon_file, minseqlen):
+        if sequence in dict_seq:
+            dict_seq[sequence] += 1
+        else:
+            dict_seq[sequence] = 1
+    
+    for sequence, count in dict_seq.items():
+        if count >= mincount:
+            list_seq.append((sequence, count))
+    
+    list_seq.sort(key=lambda item: item[1], reverse=True)
+    
+    for (sequence, count) in list_seq:
+        yield [sequence, count]
+        
 
 def get_identity(alignment_list: List[str]) -> float:
     """Compute the identity rate between two sequences
