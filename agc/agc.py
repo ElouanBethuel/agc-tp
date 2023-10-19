@@ -170,7 +170,9 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     list_otu = []
     
     for sequence1, count1 in dereplication_fulllength(amplicon_file, minseqlen, mincount):
-
+        
+        unique = True 
+        
         if len(list_otu) == 0:
             list_otu.append([sequence1, count1])
         
@@ -180,9 +182,11 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
             
                  align = nw.global_align(sequence1, sequence2, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
                  id = get_identity(align)
-                 if id <= 97:
-                    list_otu.append([sequence1, count1])
+                 if id > 97:
+                    unique = False
                     break
+            if unique:
+                list_otu.append([sequence1, count1])
  
     return list_otu
 
@@ -213,7 +217,7 @@ def main(): # pragma: no cover
     args = get_arguments()
     # Votre programme ici
     OTU_list = abundance_greedy_clustering(args.amplicon_file, args.minseqlen, args.mincount, 0, 0)
-    write_OTU(OTU_list, "test_final")
+    write_OTU(OTU_list, "OTU.fasta")
 
 if __name__ == '__main__':
     main()
